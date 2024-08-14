@@ -30,13 +30,36 @@ def getDescriptionsOfFilesInDir(dirname):
 
     return file_descriptions
 
+def formatResults(results, long_format):
+    """
+    Takes a list of file descriptions and display control flags and returns a list of formatted strings.
+
+    Args:
+        results (list): List of file description dictionaries.
+        long_format (bool): Flag to determine if long format should be used.
+
+    Returns:
+        list: A list of formatted strings for each file.
+    """
+    formatted_lines = []
+    for result in results:
+        line = result["filename"]
+        if long_format:
+            modtime_str = result["modtime"].strftime("%Y-%m-%d %H:%M:%S")
+            line = f"{modtime_str}  {result['filesize']:>10}  {line}"
+        formatted_lines.append(line)
+    return formatted_lines
+
 def main(args):
     # Get the list of files in the directory
     file_descriptions = getDescriptionsOfFilesInDir(args.dirname)
 
-    # Print just the filenames for now
-    for file_info in file_descriptions:
-        print(file_info["filename"])
+    # Format the results based on the long format flag
+    lines = formatResults(file_descriptions, args.long_format)
+
+    # Print the results
+    for line in lines:
+        print(line)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -51,6 +74,13 @@ if __name__ == "__main__":
         action="store",
         nargs="?",
         default=".",
+    )
+
+    parser.add_argument(
+        "-l",
+        "--long-format",
+        help="Presents more details about files in columnar format",
+        action="store_true",
     )
 
     args = parser.parse_args()
