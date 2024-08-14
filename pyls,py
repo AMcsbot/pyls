@@ -1,38 +1,57 @@
 import argparse
+import os
+from datetime import datetime
 
-# Set up the argument parser
-parser = argparse.ArgumentParser(
-    prog="pyls",
-    description="Lists files in given or current directory",
-    epilog="Poor man's ls",
-)
+def getDescriptionsOfFilesInDir(dirname):
+    """
+    Lists the files and folders in the given directory and constructs a list of dicts with the required information.
 
-# Add arguments
-parser.add_argument(
-    "dirname",
-    help="Name of directory to list the contents of",
-    action="store",
-    nargs="?",
-    default=".",
-)
+    Args:
+        dirname (str): The directory to list files from.
 
-parser.add_argument(
-    "-l",
-    "--long-format",
-    help="Presents more details about files in columnar format",
-    action="store_true",
-)
+    Returns:
+        list: A list of dictionaries containing file information.
+    """
+    assert isinstance(dirname, str), "dirname should be a string"
 
-parser.add_argument(
-    "-F",
-    "--filetype",
-    help="Adds an extra character to the end of the printed filename that indicates its type.",
-    action="store_true",
-)
+    if not os.path.exists(dirname):
+        raise FileNotFoundError(f"Directory '{dirname}' does not exist.")
 
-# Parse the arguments
-args = parser.parse_args()
+    file_descriptions = []
+    with os.scandir(dirname) as entries:
+        for entry in entries:
+            file_info = {
+                "filename": entry.name,
+                "filetype": ("d" if entry.is_dir() else "x" if os.access(entry.path, os.X_OK) else "f"),
+                "modtime": datetime.fromtimestamp(entry.stat().st_mtime),
+                "filesize": entry.stat().st_size if entry.is_file() else 0,
+            }
+            file_descriptions.append(file_info)
 
-# Test the argument parser
+    return file_descriptions
+
+def main(args):
+    # Get the list of files in the directory
+    file_descriptions = getDescriptionsOfFilesInDir(args.dirname)
+
+    # Print just the filenames for now
+    for file_info in file_descriptions:
+        print(file_info["filename"])
+
 if __name__ == "__main__":
-    print(f"Arguments: {args}")
+    parser = argparse.ArgumentParser(
+        prog="pyls",
+        description="Lists files in given or current directory",
+        epilog="Poor man's ls",
+    )
+
+    parser.add_argument(
+        "dirname",
+        help="Name of directory to list the contents of",
+        action="store",
+        nargs="?",
+        default=".",
+    )
+
+    args = parser.parse_args()
+    main(args)
