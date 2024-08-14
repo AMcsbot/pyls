@@ -4,60 +4,85 @@ from datetime import datetime
 
 def getDescriptionsOfFilesInDir(dirname):
     """
-    Lists the files and folders in the given directory and constructs a list of dicts with the required information.
+    Lists the files and folders in the given directory
+    and constructs a list of dicts with the required
+    information. Always fetches all the details required for
+    "long format" presentation for simplicity.
 
-    Args:
-        dirname (str): The directory to list files from.
+    dirname = The directory whose contents are to be listed.
+    long_format = True if the user has asked for the long format.
+    filetype = True if the user has asked for file type info as well.
 
-    Returns:
-        list: A list of dictionaries containing file information.
+    The return value is a list of dictionaries each with the following
+    keys -
+    "filename" = The name of the file.
+    "filetype" = "d", "f", or "x" indicating "directory", "plain file",
+                 or "executable file" respectively.
+    "modtime" = Last modified time of the file as a `datetime` object.
+    "filesize" = Number of bytes in the file.
     """
-    assert isinstance(dirname, str), "dirname should be a string"
 
-    if not os.path.exists(dirname):
-        raise FileNotFoundError(f"Directory '{dirname}' does not exist.")
+    # Ensure the argument represents an existing directory
+    assert os.path.isdir(dirname), "dirname should be an existing directory"
 
-    file_descriptions = []
-    with os.scandir(dirname) as entries:
-        for entry in entries:
-            file_info = {
-                "filename": entry.name,
-                "filetype": ("d" if entry.is_dir() else "x" if os.access(entry.path, os.X_OK) else "f"),
-                "modtime": datetime.fromtimestamp(entry.stat().st_mtime),
-                "filesize": entry.stat().st_size if entry.is_file() else 0,
-            }
-            file_descriptions.append(file_info)
+    descriptions = []
 
-    return file_descriptions
+    # Iterate over all items in the directory
+    for entry in os.listdir(dirname):
+        # Get full path of the item
+        path = os.path.join(dirname, entry)
 
-def formatResults(results, long_format):
-    """
-    Takes a list of file descriptions and display control flags and returns a list of formatted strings.
+        # Check if it's a file or directory
+        if os.path.isdir(path):
+            filetype = "d"  # Directory
+            filesize = 0  # Size is not relevant for directories
+        elif os.path.isfile(path):
+            filetype = "f"  # Plain file
+            filesize = os.path.getsize(path)  # Size of the file
+        else:
+            continue  # Skip other types like symbolic links
 
-    Args:
-        results (list): List of file description dictionaries.
-        long_format (bool): Flag to determine if long format should be used.
+        # Check if the file is executable
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            filetype = "x"  # Executable file
 
-    Returns:
-        list: A list of formatted strings for each file.
-    """
+        # Get the last modified time
+        modtime = datetime.fromtimestamp(os.path.getmtime(path)).replace(microsecond=0)
+
+        # Append the description dictionary to the list
+        descriptions.append({
+            "modtime": modtime,
+            "filesize": filesize,
+            "filetype": filetype,
+            "filename": entry
+        })
+
+    return descriptions
+
+def formatResults(results, long_format, filetype):
     formatted_lines = []
     for result in results:
         line = result["filename"]
+
+        if filetype:
+            if result["filetype"] == "d":
+                line += "/"
+            elif result["filetype"] == "x":
+                line += "*"
+            else:
+                print(line)
+
         if long_format:
             modtime_str = result["modtime"].strftime("%Y-%m-%d %H:%M:%S")
             line = f"{modtime_str}  {result['filesize']:>10}  {line}"
+
         formatted_lines.append(line)
     return formatted_lines
 
 def main(args):
-    # Get the list of files in the directory
     file_descriptions = getDescriptionsOfFilesInDir(args.dirname)
+    lines = formatResults(file_descriptions, args.long_format, args.filetype)
 
-    # Format the results based on the long format flag
-    lines = formatResults(file_descriptions, args.long_format)
-
-    # Print the results
     for line in lines:
         print(line)
 
@@ -80,6 +105,13 @@ if __name__ == "__main__":
         "-l",
         "--long-format",
         help="Presents more details about files in columnar format",
+        action="store_true",
+    )
+
+    parser.add_argument(
+        "-F",
+        "--filetype",
+        help="Adds an extra character to the end of the printed filename that indicates its type.",
         action="store_true",
     )
 
