@@ -1,0 +1,38 @@
+import argparse
+
+# Set up the argument parser
+parser = argparse.ArgumentParser(
+    prog="pyls",
+    description="Lists files in given or current directory",
+    epilog="Poor man's ls",
+)
+
+# Add arguments
+parser.add_argument(
+    "dirname",
+    help="Name of directory to list the contents of",
+    action="store",
+    nargs="?",
+    default=".",
+)
+
+parser.add_argument(
+    "-l",
+    "--long-format",
+    help="Presents more details about files in columnar format",
+    action="store_true",
+)
+
+parser.add_argument(
+    "-F",
+    "--filetype",
+    help="Adds an extra character to the end of the printed filename that indicates its type.",
+    action="store_true",
+)
+
+# Parse the arguments
+args = parser.parse_args()
+
+# Test the argument parser
+if __name__ == "__main__":
+    print(f"Arguments: {args}")
